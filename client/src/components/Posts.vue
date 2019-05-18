@@ -5,6 +5,9 @@
       <div>
         <router-link v-bind:to="{ name: 'addpost' }" class="">Add Post</router-link>
       </div>
+      <div>
+        <a href="#" @click="getAccessToken()">getAccessToken</a>
+      </div>
       <table>
         <tr>
           <td>Title</td>
@@ -21,26 +24,105 @@
         </tr>
       </table>
     </div>
-    <div v-else>
-      There are no posts.. Lets add one now <br /><br />
+    <div v-else> code {{this.code }}  <br />
+    access-token {{this.access_token}}
+    <br />
+
       <router-link v-bind:to="{ name: 'addpost' }" class="add_post_link">Add Post</router-link>
+      <div id="getAccessToken">
+      <!-- `greet` is the name of a method defined below -->
+        <button v-on:click="getAccessToken">getAccessToken</button>
+        <button v-on:click="getUserInfo">getUserInfo</button>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
 import PostsService from '@/services/PostsService'
+import axios from 'axios'
+import Vue from 'vue'
+const base = axios.create({
+  baseURL: 'http://192.168.20.173:8080'
+})
+
+Vue.prototype.$http = base
+
 export default {
   name: 'posts',
   data () {
     return {
-      posts: []
+      posts: [],
+      code: '',
+      access_token: '',
+      request_params: {
+        code: this.$route.fullPath.substring(7),
+        redirect_uri: 'http://192.168.20.173:8080',
+        client_id: '95_5vmtfb9d65k4o8ow4s8wsc0ckgk0c80c8c4c84ogoksw00cg00',
+        client_secret: '1nj2rat4vysk404wsw0040cgc8owsc4ks4k448csk04c8ck80c',
+        grant_type: 'authorization_code'
+      }
     }
+  },
+  created: function () {
+    console.log('created called.')
+    this.code = this.$route.fullPath.substring(7)
+    this.$http.get('https://webhook.site/96ae4c12-c12c-45c4-8238-0dd921b97d32').then((response) => {
+      alert('gerelee')
+    })
+  .catch((e) => {
+    console.error(e)
+  })
   },
   mounted () {
     this.getPosts()
   },
   methods: {
+    getAccessToken: function (event) {
+    // alert(JSON.stringify(this.request_params))
+      // this.$http.post('https://webhook.site/96ae4c12-c12c-45c4-8238-0dd921b97d32')
+      this.$http.post('https://mgw.test.lending.mn/api/oauth/v2/token', {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: JSON.stringify(this.request_params)
+      })
+        .then(response => {
+          if (response.code === 0) {
+            this.access_token = response.accessToken
+            alert('Hello ' + this.accessToken + '!')
+          } else {
+            alert('failed')
+          }
+        })
+      .catch(e => {
+        this.errors.push(e)
+      })
+    },
+    getUserInfo: function (event) {
+      // alert(this.accessToken)
+      this.$http.get('https://mgw.test.lending.mn/api/oauth/v2/token', {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'x-and-auth-token': this.accessToken
+        }
+      })
+      .then(response => {
+        if (response.code === 0) {
+          this.access_token = response.accessToken
+        //   "userId": "wPhXsPPsHteuk8kS5gf0hA==",
+        // "firstName": "Ber-A-Ber",
+        // "lastName": "Баярсайхан",
+        // "phoneNumber": "80026446"
+          alert('Hello ' + response + '!')
+        } else {
+          alert('failed')
+        }
+      })
+    .catch(e => {
+      this.errors.push(e)
+    })
+    },
     async getPosts () {
       const response = await PostsService.fetchPosts()
       this.posts = response.data.posts
